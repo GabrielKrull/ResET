@@ -1,5 +1,6 @@
 import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
 import { healthPlugin } from "./plugins/health.js";
+import { authRoutes } from "./auth/routes.js";
 import type { DatabaseInstance } from "./database/connection.js";
 
 export interface BuildAppOptions {
@@ -25,10 +26,13 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     },
   });
 
+  fastify.decorateRequest("authUser", null);
+
   fastify.setErrorHandler((error: FastifyError, request, reply) => {
-    const statusCode = error.statusCode && error.statusCode >= 400 && error.statusCode < 500
-      ? error.statusCode
-      : 500;
+    const statusCode =
+      error.statusCode && error.statusCode >= 400 && error.statusCode < 500
+        ? error.statusCode
+        : 500;
 
     request.log.error({ err: error }, "Request failed");
     return reply.status(statusCode).send({
@@ -51,8 +55,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     });
   });
 
-  // Register health check endpoints
   await fastify.register(healthPlugin, { database });
+  await fastify.register(authRoutes, { database });
 
   return fastify;
 }

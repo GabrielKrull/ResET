@@ -159,7 +159,7 @@ compartilhar a mesma autorização ou convite.
 
 - Somente administradores podem iniciar a redefinição.
 - O sistema gera senha temporária criptograficamente aleatória, com validade
-  limitada e uso único. O prazo exato permanece pendente de aprovação.
+  limitada e uso único. O prazo aprovado é de 24 horas.
 - Armazenar somente hash seguro da senha temporária; nunca registrar senha ou
   credenciais sensíveis.
 - No primeiro acesso, exigir que o usuário defina uma nova senha. A temporária
@@ -364,7 +364,7 @@ para major 10 apenas para silenciar o audit. Detalhes completos e comandos em
 
 A etapa de correção controlada e a revalidação PostgreSQL da Etapa 1.3 estão
 concluídas. A autenticação está autorizada como etapa própria e deve avançar
-incrementalmente, fechando as decisões pendentes antes dos fluxos afetados.
+incrementalmente, aplicando as decisões operacionais aprovadas em 04/11/2026 nos fluxos afetados.
 
 ## Etapa 1.3 — Validação final das dependências
 
@@ -383,29 +383,21 @@ concluídos.
 
 ## Etapa 1.4 — Planejamento e implementação incremental da autenticação
 
-**Estado:** implementação autorizada como etapa própria. O bootstrap do
-primeiro administrador por CLI única, com senha digitada sem eco e bloqueio
-quando já houver administrador, foi implementado. Os demais fluxos aguardam as
-decisões operacionais que os afetam.
+**Estado:** implementação autorizada e em andamento. O bootstrap do primeiro
+administrador foi implementado. Em 04/11/2026 foram aprovados: convites de
+cadastro com validade de 7 dias e um uso, revogáveis por qualquer administrador
+e distribuídos manualmente; senha temporária de redefinição com validade de
+24 horas e uso único; confirmação da senha atual do administrador para autorizar
+a redefinição.
 
-Decisões definidas: expiração ociosa e absoluta da sessão, persistência no
-Windows Credential Manager, senha temporária administrativa de uso único,
-regras centrais dos convites de cadastro e de grupo, regra de nome de usuário e
-perfil Argon2id.
-
-Pendências antes de implementar:
-
-1. Prazo exato de validade da senha temporária.
-2. Como o administrador comprova autorização para iniciar a redefinição.
-3. Prazo de validade, limite numérico de utilizações, autoridade/condições de
-   revogação e regras práticas de distribuição dos convites de cadastro.
+Essas decisões operacionais estão fechadas. A criação e revogação de convites e
+a redefinição administrativa serão implementadas em incrementos próprios.
 O bootstrap CLI foi validado com testes unitários e integração PostgreSQL. A
 execução requer migrations prévias: `npm run migrate` e `npm run bootstrap:admin`;
 em produção compilada: `npm run migrate:prod` e
 `npm run bootstrap:admin:prod`. O CLI usa uma transação com advisory lock e
 índice único parcial para impedir inicializações concorrentes duplicadas.
-Executa hash PHC Argon2id com o perfil oficial aprovado. Não implementa login,
-cadastro, convites ou sessões.
+Executa hash PHC Argon2id com o perfil oficial aprovado. A Etapa 1.5 acrescenta login, validação de sessão, consulta da sessão atual e logout no backend; cadastro e convites continuam como próximos incrementos.
 
 Validação: 16 testes unitários passaram; 8 testes de integração passaram contra
 PostgreSQL 17; lint, typecheck, build do monorepo e build da imagem de produção
@@ -415,16 +407,27 @@ comando compilado foi executado sem TTY e recusou a operação sem criar usuári
 registradas na Etapa 1.2, sem altas/críticas; `npm audit --omit=dev` reportou 0.
 O container e a imagem descartáveis de validação foram removidos.
 
-Pendências operacionais restantes são prazo da senha temporária, prova da
-autorização administrativa e validade, quantidade, revogação e distribuição dos
-convites de cadastro. Não decidir esses pontos automaticamente.
+As decisões operacionais restantes foram aprovadas em 04/11/2026 e estão registradas nesta seção.
+
+
+### Etapa 1.5 — Login e sessões no backend (implementada; verificação parcial)
+
+Foram criados `POST /auth/login`, `GET /auth/me` e `POST /auth/logout`, além da
+migration `003_sessions` (schema `1.2.0`). O token opaco tem 256 bits aleatórios;
+o banco armazena somente SHA-256. O backend renova 7 dias de inatividade após
+atividade válida, respeita o limite absoluto de 30 dias e rejeita/revoga sessões
+expiradas. Respostas de credenciais inválidas são genéricas, há verificação com
+hash fictício para nomes inexistentes e limitação de tentativas por IP e usuário.
+
+O typecheck do workspace `@reset/server` passou em 04/11/2026. A suíte de testes
+não foi executada nesta etapa. O cliente desktop, o armazenamento do token no
+Windows Credential Manager, convites e cadastro permanecem como próximos
+incrementos da Fase 1.
 
 # 8. Próxima fase: autenticação e gerenciamento de usuários
 
 A próxima fase funcional deverá implementar contas criadas exclusivamente por
-convite de cadastro e autenticadas por nome de usuário e senha. A implementação
-foi autorizada como etapa própria; avançar incrementalmente e obter as decisões
-operacionais necessárias antes dos fluxos que dependem delas.
+convite de cadastro e autenticadas por nome de usuário e senha. A implementação foi autorizada como etapa própria; avançar incrementalmente e aplicar as decisões operacionais aprovadas em 04/11/2026 nos fluxos correspondentes.
 
 Os grupos permanecem privados e utilizam convites de grupo separados dos
 convites de cadastro.
@@ -436,7 +439,7 @@ Funcionalidades previstas:
 - Nome de usuário e senha; sem Google, OAuth ou provedor de identidade externo.
 - Login.
 - Logout.
-- Redefinição de senha administrativa, conforme fluxo ainda pendente.
+- Redefinição administrativa com senha temporária de uso único, válida por 24 horas e autorizada pela confirmação da senha atual do administrador.
 - Perfil básico.
 - Alteração de senha.
 - Gerenciamento de sessões.
@@ -469,7 +472,7 @@ Avaliar as tabelas:
 
 Os nomes e a estrutura definitiva deverão ser revisados antes da implementação.
 
-## Direção de autenticação aprovada; detalhes pendentes
+## Direção de autenticação aprovada e decisões operacionais fechadas
 
 A direção aprovada é usar sessões opacas persistidas no PostgreSQL, enviadas ao
 servidor como credencial Bearer por HTTPS e mantidas entre reinicializações do
@@ -484,16 +487,15 @@ deve rejeitá-la e revogá-la. Logout invalida a sessão no servidor e remove a
 credencial local. Enquanto válida, a sessão mantém o usuário autenticado após
 reiniciar o aplicativo.
 
-A implementação foi autorizada como etapa própria. Permanecem pendentes:
+Decisões aprovadas em 04/11/2026:
 
-- Prazo exato de validade da senha temporária de redefinição.
-- Como o administrador comprovará autorização para iniciar redefinição de senha.
-- Prazo de validade, limite numérico de usos, autoridade e condições para
-  revogar, e regras práticas de distribuição dos convites de cadastro.
+- Convites de cadastro: validade de 7 dias, um uso, revogáveis por qualquer
+  administrador e distribuídos manualmente, sem envio de e-mail.
+- Senha temporária administrativa: validade de 24 horas e uso único.
+- Autorização da redefinição: o administrador confirma a própria senha atual.
 
-Não tomar decisões automaticamente para preencher esses detalhes; fechá-los
-antes dos fluxos correspondentes. A implementação autorizada deve respeitar o
-custo zero; não adicionar fluxo ou dependência de e-mail.
+A implementação permanece incremental, sem serviço de e-mail ou dependência
+externa paga.
 
 # 9. Planejamento das próximas fases
 
@@ -505,8 +507,8 @@ A ordem geral do projeto permanece:
 | Etapa 1.1 | Saneamento técnico | Concluída |
 | Etapa 1.2 | Correção controlada de dependências | Concluída; 10 avisos moderados residuais classificados como falso positivo do Minimatch 3.x |
 | Etapa 1.3 | Revalidação das dependências com PostgreSQL | Concluída; integração com PostgreSQL 17 e audit final registrados |
-| Etapa 1.4 | Detalhes operacionais da autenticação | Bootstrap CLI implementado e validado; pendem detalhes de convites, senha temporária e autorização administrativa |
-| Fase 1 | Autenticação e usuários | Em andamento; bootstrap inicial concluído; demais fluxos dependem de decisões operacionais |
+| Etapa 1.4 | Detalhes operacionais da autenticação | Bootstrap CLI implementado e validado; decisões operacionais fechadas em 04/11/2026 |
+| Fase 1 | Autenticação e usuários | Em andamento; bootstrap e primeira fatia de sessões/login no backend implementados; convites e cadastro são os próximos incrementos |
 | Fase 2 | Grupos, membros e convites | Pendente |
 | Fase 3 | Conversas por texto | Pendente |
 | Fase 4 | Voz, vídeo e compartilhamento de tela | Pendente |
@@ -541,27 +543,23 @@ Antes de implementar qualquer funcionalidade importante, apresentar a proposta t
 # 11. Instruções para a próxima execução
 
 Implementar a autenticação somente dentro da etapa própria autorizada e em
-sequência incremental. Não avançar nos fluxos que dependem de decisões ainda
-pendentes sem receber essas definições.
+sequência incremental. Avançar em sequência incremental, conforme as decisões operacionais aprovadas em 04/11/2026.
 
 O diagnóstico, a correção de dependências, o audit final e a integração
 PostgreSQL já foram registrados. A implementação de autenticação foi autorizada
 como etapa própria. O bootstrap CLI e a regra de nome de usuário foram
-implementados/aprovados; prazo da senha temporária, prova de autorização
-administrativa e limites/distribuição dos convites de cadastro ainda aguardam
-definição.
+implementados/aprovados; as regras dos convites e da redefinição administrativa foram aprovadas em 04/11/2026.
 
 Sequência de trabalho autorizada:
 
-- Fechar as decisões operacionais pendentes antes de implementar seus fluxos.
+- Aplicar as decisões operacionais aprovadas nos fluxos correspondentes.
 - Prosseguir incrementalmente com bootstrap, convites, contas, sessões e
   redefinição administrativa, executando testes de segurança e integração
   PostgreSQL em cada etapa.
 - Não introduzir envio de e-mail ou provedor externo de identidade; qualquer
   exceção ao custo zero exige aprovação explícita.
 
-O bootstrap CLI está implementado. Os demais fluxos devem aguardar as decisões
-operacionais que os afetam. Qualquer implementação deve aceitar criação de conta somente
+O bootstrap CLI está implementado e as decisões operacionais estão fechadas. Qualquer implementação deve aceitar criação de conta somente
 por convite de cadastro validado no backend, usar nome de usuário e senha, manter
 os grupos privados por convites próprios e respeitar o requisito de custo zero.
 

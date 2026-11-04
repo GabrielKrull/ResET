@@ -228,7 +228,7 @@ persistidas no PostgreSQL, persistência entre reinicializações no Windows
 Credential Manager e expiração ociosa de 7 dias/absoluta de 30 dias estão
 aprovadas. O bootstrap inicial por CLI única, senha sem eco e bloqueio após
 existir administrador também está aprovado e implementado. Os detalhes
-operacionais listados adiante continuam pendentes para os demais fluxos.
+a implementação dos demais fluxos ainda será feita em incrementos próprios.
 
 As decisões novas de produto substituem o rascunho anterior deste documento de
 cadastro aberto com e-mail e verificação de e-mail. `infodoc.md` permanece
@@ -300,8 +300,7 @@ codificado, não criptografado. [OWASP JWT Cheat Sheet](https://cheatsheetseries
   implementação deve mantê-los independentes; não compartilhar o mesmo convite
   nem a autorização entre os dois fluxos.
 - Registro da senha temporária administrativa: hash, validade, uso único e
-  estado que obrigue a troca no primeiro acesso. O prazo exato permanece
-  pendente.
+  estado que obrigue a troca no primeiro acesso. O prazo aprovado é de 24 horas.
 
 ### Fluxos e controles aprovados para orientar a futura implementação
 
@@ -309,8 +308,7 @@ codificado, não criptografado. [OWASP JWT Cheat Sheet](https://cheatsheetseries
    Exigir token criptograficamente aleatório e autorização confirmada pelo
    backend antes de criar conta; armazenar somente o hash. Validar expiração,
    revogação e limite de usos, consumindo cada uso atomicamente. A interface
-   nunca decide se o cadastro está autorizado. Permanecem pendentes prazo,
-   limite numérico de usos, autoridade/condições de revogação e distribuição.
+   nunca decide se o cadastro está autorizado. As regras aprovadas são validade de 7 dias, um uso, revogação por qualquer administrador e distribuição manual.
 2. **Login:** usar exclusivamente nome de usuário e senha; aplicar limitação de
    tentativas e respostas que evitem enumeração de contas. Não oferecer Google,
    OAuth ou provedor externo de identidade.
@@ -332,7 +330,7 @@ codificado, não criptografado. [OWASP JWT Cheat Sheet](https://cheatsheetseries
    validade e permitir um uso. No primeiro acesso, obrigar a definir nova senha;
    não permitir reutilizar a temporária. Invalidar todas as sessões anteriores
    e auditar a ação sem registrar senha ou credenciais sensíveis. O prazo exato
-   e como o administrador comprova autorização ainda aguardam decisão.
+   e o administrador confirma sua senha atual antes de iniciar a operação.
 6. **Convites de grupo:** membros com autorização adequada podem gerar convites;
    o backend verifica essa permissão. Validar tokens criptograficamente
    aleatórios e guardar somente seus hashes; aplicar expiração, revogação,
@@ -340,12 +338,12 @@ codificado, não criptografado. [OWASP JWT Cheat Sheet](https://cheatsheetseries
    autorização para ingresso. A aceitação autoriza ingresso no grupo, mas não
    concede privilégios administrativos.
 
-### Decisões ainda pendentes para aprovação
+### Decisões operacionais aprovadas — 2026-11-04
 
-- Prazo exato da senha temporária administrativa e como o administrador
-  comprova autorização para iniciar a redefinição.
-- Prazo de validade, limite numérico de usos, quem pode revogar e em quais
-  condições, e regras práticas de distribuição dos convites de cadastro.
+- Convites de cadastro: validade de 7 dias, um uso, revogáveis por qualquer
+  administrador e distribuídos manualmente, sem e-mail.
+- Senha temporária administrativa: validade de 24 horas e uso único.
+- Autorização de redefinição: o administrador confirma a própria senha atual.
 ### Bootstrap CLI do primeiro administrador
 
 O comando `npm run bootstrap:admin` cria o primeiro administrador após as
@@ -389,3 +387,26 @@ Medições realizadas no ambiente local de desenvolvimento (Windows 11, Intel Xe
 | Memória em repouso (Backend)      | < 250 MB        | **72.8 MB**    |
 | Tempo de build do Frontend (Vite) | —               | **2.16 s**     |
 | Tempo de compilação Tauri (Dev)   | —               | **2m 40s**     |
+
+## Etapa 1.5 — Backend de login e sessões
+
+Primeira fatia da Fase 1: login, consulta da identidade autenticada e logout no
+backend. A migration `003_sessions` cria sessões vinculadas a usuários, com hash
+único do token, horários de atividade e expiração, e revogação. A versão do
+schema passa a `1.2.0`.
+
+O login gera token opaco aleatório de 256 bits; somente SHA-256 do token fica no
+PostgreSQL. Cada atividade válida renova a expiração ociosa de 7 dias, limitada
+pela expiração absoluta de 30 dias. O backend rejeita e revoga sessões expiradas.
+Credenciais incorretas recebem uma resposta genérica; a verificação de usuário
+inexistente usa um hash Argon2id fictício para reduzir diferença de tempo. O
+limitador provisório aplica 5 falhas por combinação de IP e usuário e 25 por IP
+em 15 minutos, em memória no processo.
+
+Endpoints: `POST /auth/login`, `GET /auth/me` e `POST /auth/logout`. O desktop
+usará Bearer token, mas a integração com o Windows Credential Manager e a tela
+de login ainda são incrementos seguintes. A criação de convites e contas também
+será implementada depois, usando a autenticação administrativa deste backend.
+
+A verificação automatizada desta etapa deve ser executada antes de considerar a
+implementação pronta para integração.
