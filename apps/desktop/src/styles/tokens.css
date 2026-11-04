@@ -1,0 +1,21 @@
+:root {
+  --color-bg: #101613;
+  --color-surface: #1b2820;
+  --color-surface-hover: #23342a;
+  --color-accent: #72c88b;
+  --color-accent-hover: #83d49b;
+  --color-accent-light: #b8e7c3;
+  --color-text: #e6eee8;
+  --color-text-muted: #8e9e94;
+  --color-border: #2b3d32;
+  --color-status-ok: #72c88b;
+  --color-status-warning: #eab308;
+  --color-status-error: #ef4444;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+    "Helvetica Neue", sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}

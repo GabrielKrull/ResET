@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default capability for ResET main window",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

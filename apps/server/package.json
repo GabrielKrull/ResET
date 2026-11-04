@@ -1,0 +1,35 @@
+{
+  "name": "@reset/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/database/migrate.ts",
+    "migrate:prod": "node dist/database/migrate.js",
+    "bootstrap:admin": "tsx src/cli/bootstrap-admin.ts",
+    "bootstrap:admin:prod": "node --conditions=production dist/cli/bootstrap-admin.js",
+    "test": "vitest run --exclude src/__tests__/integration/**",
+    "test:integration": "vitest run src/__tests__/integration/database.test.ts"
+  },
+  "dependencies": {
+    "@reset/shared": "*",
+    "argon2": "^0.45.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "kysely": "^0.28.17",
+    "pg": "^8.13.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.11",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.12"
+  }
+}
